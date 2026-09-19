@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "bash \"$HOME/.tmux/plugins/tmux-claude-monitor/hooks/claude-state.sh\" SessionStart", "timeout": 5 } ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "bash \"$HOME/.tmux/plugins/tmux-claude-monitor/hooks/claude-state.sh\" UserPromptSubmit", "timeout": 5 } ] }
+    ],
+    "PreToolUse": [
+      { "hooks": [ { "type": "command", "command": "bash \"$HOME/.tmux/plugins/tmux-claude-monitor/hooks/claude-state.sh\" PreToolUse", "timeout": 5 } ] }
+    ],
+    "Notification": [
+      { "hooks": [ { "type": "command", "command": "bash \"$HOME/.tmux/plugins/tmux-claude-monitor/hooks/claude-state.sh\" Notification", "timeout": 5 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "bash \"$HOME/.tmux/plugins/tmux-claude-monitor/hooks/claude-state.sh\" Stop", "timeout": 5 } ] }
+    ],
+    "SessionEnd": [
+      { "hooks": [ { "type": "command", "command": "bash \"$HOME/.tmux/plugins/tmux-claude-monitor/hooks/claude-state.sh\" SessionEnd", "timeout": 5 } ] }
+    ]
+  }
+}
