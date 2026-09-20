@@ -13,16 +13,18 @@ pane=${1:-${TMUX_PANE:-}}
 
 dir=$(cm_state_dir)
 file=$(cm_state_file "$dir" "$pane")
-[ -r "$file" ] || exit 0
+[ -f "$file" ] || exit 0
 
-IFS= read -r line <"$file" || exit 0
-state=$(cm_read_field "$line" state) || exit 0
-[ "$state" = "done" ] || exit 0
+grep -qxF 'state=done' "$file" 2>/dev/null || exit 0
 
-new_line=${line/state=done/state=idle}
-# since is intentionally left untouched: it still marks when Claude actually
-# stopped, not when the pane happened to regain focus.
+# One key=value per line now (not one line total) -- rewrite only the line
+# that's exactly "state=done", leave every other line (name, cwd, since...)
+# untouched. since is intentionally left alone: it still marks when Claude
+# actually stopped, not when the pane happened to regain focus.
 tmp="$file.$$"
-printf '%s\n' "$new_line" >"$tmp" 2>/dev/null && mv -f "$tmp" "$file" 2>/dev/null
+while IFS= read -r line || [ -n "$line" ]; do
+    [ "$line" = "state=done" ] && line="state=idle"
+    printf '%s\n' "$line"
+done <"$file" >"$tmp" 2>/dev/null && mv -f "$tmp" "$file" 2>/dev/null
 
 exit 0

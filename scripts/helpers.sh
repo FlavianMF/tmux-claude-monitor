@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared helpers for tmux-claude-monitor.
-# Sourced by render.sh, mark_seen.sh and hooks/claude-state.sh.
+# Sourced by render.sh, mark_seen.sh, pane_picker.sh and hooks/claude-state.sh.
 
 cm_state_dir() {
     local dir
@@ -23,14 +23,45 @@ cm_state_file() {
     printf '%s/pane-%s.state' "$dir" "${pane#%}"
 }
 
-cm_read_field() {
-    local line=$1 key=$2 kv
-    for kv in $line; do
-        case $kv in
-            "$key"=*) printf '%s' "${kv#*=}"; return 0 ;;
-        esac
+# Every field a state file may carry. Kept as one space-separated list (not an
+# associative array) so this stays portable to older bash (e.g. bash 3.2 on
+# stock macOS) -- everything here only ever needs `printf -v` and word-split
+# iteration, both available since bash 3.1.
+cm_state_fields="state since pane pid session cwd name name_source daemon_state tempo"
+
+# cm_load_state_file <file> <prefix>
+# One key=value per line (NOT space-separated on one line -- values like a
+# Claude-generated session name or a cwd with a space in it must survive
+# intact). Splits only on the FIRST '=' per line. Populates ${prefix}<field>
+# as plain variables for every field in cm_state_fields, resetting all of
+# them to "" first so a loop that reuses the same prefix across many files
+# never leaks a previous iteration's value into a field the current file
+# doesn't have. Unknown lines (future fields, or a stray blank line) are
+# silently ignored -- forward/backward compatible on purpose.
+cm_load_state_file() {
+    local file=$1 prefix=$2 fld line key val
+    for fld in $cm_state_fields; do
+        printf -v "${prefix}${fld}" '%s' ''
     done
-    return 1
+    [ -f "$file" ] || return 1
+    while IFS= read -r line || [ -n "$line" ]; do
+        key=${line%%=*}
+        val=${line#*=}
+        case " $cm_state_fields " in
+            *" $key "*) printf -v "${prefix}${key}" '%s' "$val" ;;
+        esac
+    done <"$file"
+}
+
+# cm_json_field <json-text> <key>
+# Pulls "<key>":"<value>" out of a JSON blob without a jq dependency -- same
+# hand-rolled-text-parsing spirit as the /proc walk in claude-state.sh. Only
+# handles string values and doesn't unescape backslashes/quotes inside them;
+# good enough for session ids, transcript paths and short generated titles.
+# If the key repeats, the FIRST match wins.
+cm_json_field() {
+    printf '%s' "$1" | grep -o "\"$2\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" |
+        head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"$/\1/'
 }
 
 # Human elapsed time, at most 6 chars: 42s / 2m14s / 3h07m
